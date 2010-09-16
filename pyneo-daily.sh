@@ -11,7 +11,7 @@ DSCDIR="./dsc"
 
 setup()
 {
-	mkdir -p $BUILD $DEBDIRS $DSCDIR
+	mkdir -p $BUILD $DSCDIR
 
 	if [ -d "$PYNEOGIT" ]; then
 		echo "$PYNEOGIT already exists - not cloning again"
@@ -65,10 +65,27 @@ buildpyneo()
 	rm -rf $BUILD/*
 }
 
+buildparoli()
+{
+	[ ! -d $PAROLIGIT ] && { echo "no such directory: $PAROLIGIT"; exit 1; }
+	[ ! -d $BUILD ] && { echo "no such directory: $BUILD"; exit 1; }
+	[ ! -d $DSCDIR ] && { echo "no such directory: $DSCDIR"; exit 1; }
+
+	for pkg in ijon; do
+		cp -r "$PAROLIGIT/$pkg" "$BUILD/python-$pkg-$DATENOW"
+		tar --directory "$BUILD" --create --gzip --file "$BUILD/python-${pkg}_$DATENOW.orig.tar.gz" "python-$pkg-$DATENOW"
+		cp -r "$DEBDIRS/python-$pkg-debian" "$BUILD/python-$pkg-$DATENOW/debian"
+		DEBEMAIL="josch@pyneo.org" DEBFULLNAME="Johannes Schauer" dch --package "python-$pkg" --newversion "$DATENOW" --distribution unstable --empty --changelog "$BUILD/python-$pkg-$DATENOW/debian/changelog" --create "new nightly build"
+		( cd "$BUILD/python-$pkg-$DATENOW"; dpkg-buildpackage -S -us -uc )
+	done
+	mv $BUILD/*_* "$DSCDIR"
+	rm -rf $BUILD/*
+}
+
 fullclean()
 {
-	rm -rf $BUILD/*
-	rm -rf $DSCDIR/*
+	rm -rf $BUILD
+	rm -rf $DSCDIR
 	rm -rf $PYNEOGIT
 	rm -rf $PAROLIGIT
 }
@@ -83,13 +100,18 @@ else
 				echo "doing setup"
 				setup
 				;;
-			build)
+			buildall)
 				echo "building packages"
 				buildpyneo
+				buildparoli
 				;;
 			buildpyneo)
 				echo "building pyneo"
 				buildpyneo
+				;;
+			buildparoli)
+				echo "building paroli"
+				buildparoli
 				;;
 			fullclean)
 				echo "cleaning"
