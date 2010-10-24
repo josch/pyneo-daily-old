@@ -38,6 +38,8 @@ run()
 	else
 		echo "nothing to update"
 	fi
+
+	#TODO: check paroli repository
 }
 
 buildpyneo()
@@ -90,9 +92,21 @@ fullclean()
 	rm -rf $PAROLIGIT
 }
 
-if [ $# -eq 0 ]; then
-	echo "no arguments supplied"
+usage()
+{
+	echo "usage: ./pyneo-daily ARG"
+	echo " setup       does an intial setup"
+	echo " run         updates git and if new versions are available, runs buildpyneo"
+	echo "             and buildparoli accordingly"
+	echo " buildall    runs buildpyneo and buildparoli"
+	echo " buildpyneo  builds pyneo deb source packages from current git version"
+	echo " buildparoli builds paroli deb source packages from current git version"
+	echo " fullclean   removes build directory, source packages and git repositories"
 	exit 0
+}
+
+if [ $# -eq 0 ]; then
+	usage
 else
 	for arg in $@; do
 		case $arg in
@@ -123,7 +137,7 @@ else
 				;;
 			*)
 				echo "unknown arg $arg"
-				exit 1
+				usage
 		esac
 	done
 fi
