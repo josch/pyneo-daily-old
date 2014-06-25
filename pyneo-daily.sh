@@ -26,7 +26,17 @@ setup()
 	fi
 }
 
-run()
+autorun()
+{
+	if [ ! -d "$PYNEOGIT" && ! -d "$PAROLIGIT" && ! -d $BUILD && ! -d $DSCDIR ]; then
+		setup
+		force_build_dsc
+	else
+		build_dsc
+	fi
+}
+
+build_dsc()
 {
 	[ ! -d $PYNEOGIT ] && { echo "no such directory: $PYNEOGIT"; exit 1; }
 
@@ -34,15 +44,35 @@ run()
 	     `( cd $PYNEOGIT; git show-ref refs/heads/master; ) | awk '{print $1}'` ]; then
 		echo "new version available, pulling new changes"
 		( cd $PYNEOGIT; git pull; ) || { echo "pulling failed"; exit 1; }
-		buildpyneo
+		force_build_dsc_pyneo
 	else
 		echo "nothing to update"
 	fi
 
-	#TODO: check paroli repository
+	[ ! -d $PAROLIGIT ] && { echo "no such directory: $PAROLIGIT"; exit 1; }
+
+	if [ `( cd $PAROLIGIT; git ls-remote origin refs/heads/master; ) | awk '{print $1}'` != \
+	     `( cd $PAROLIGIT; git show-ref refs/heads/master; ) | awk '{print $1}'` ]; then
+		echo "new version available, pulling new changes"
+		( cd $PAROLIGIT; git pull; ) || { echo "pulling failed"; exit 1; }
+		force_build_dsc_paroli
+	else
+		echo "nothing to update"
+	fi
 }
 
-buildpyneo()
+force_build_dsc()
+{
+	[ ! -d $PYNEOGIT ] && { echo "no such directory: $PYNEOGIT"; exit 1; }
+
+	force_build_dsc_pyneo
+
+	[ ! -d $PAROLIGIT ] && { echo "no such directory: $PAROLIGIT"; exit 1; }
+
+	force_build_dsc_paroli
+}
+
+force_build_dsc_pyneo()
 {
 	[ ! -d $PYNEOGIT ] && { echo "no such directory: $PYNEOGIT"; exit 1; }
 	[ ! -d $BUILD ] && { echo "no such directory: $BUILD"; exit 1; }
@@ -67,7 +97,7 @@ buildpyneo()
 	rm -rf $BUILD/*
 }
 
-buildparoli()
+force_build_dsc_paroli()
 {
 	[ ! -d $PAROLIGIT ] && { echo "no such directory: $PAROLIGIT"; exit 1; }
 	[ ! -d $BUILD ] && { echo "no such directory: $BUILD"; exit 1; }
@@ -94,10 +124,12 @@ fullclean()
 
 usage()
 {
-	echo "usage: ./pyneo-daily ARG"
+	echo "usage: ./pyneo-daily ARG - default: autorun"
+	echo ""
 	echo " setup       does an intial setup"
 	echo " run         updates git and if new versions are available, runs buildpyneo"
 	echo "             and buildparoli accordingly"
+	echo " autorun     run setup if needed and then run"
 	echo " buildall    runs buildpyneo and buildparoli"
 	echo " buildpyneo  builds pyneo deb source packages from current git version"
 	echo " buildparoli builds paroli deb source packages from current git version"
@@ -106,10 +138,14 @@ usage()
 }
 
 if [ $# -eq 0 ]; then
-	usage
+	echo "doing autorun"
+	autorun
 else
 	for arg in $@; do
 		case $arg in
+			--help)
+				usage
+				;;
 			setup)
 				echo "doing setup"
 				setup
@@ -134,6 +170,10 @@ else
 			run)
 				echo "doing run"
 				run
+				;;
+			autorun)
+				echo "doing autorun"
+				autorun
 				;;
 			*)
 				echo "unknown arg $arg"
